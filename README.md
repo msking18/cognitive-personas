@@ -3,7 +3,8 @@
 > **Cross-Harness Cognitive Persona Framework & Best-Practices Playbook** paired with an installable **Antigravity Reference Plugin**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)]()
+[![Zero npm Dependencies](https://img.shields.io/badge/npm%20dependencies-0-brightgreen.svg)]()
+[![Companion: agent--memory--mcp](https://img.shields.io/badge/companion-agent--memory--mcp-purple.svg)]()
 [![Node.js Tests](https://img.shields.io/badge/tests-node%20--test-success.svg)]()
 
 ---
@@ -106,7 +107,17 @@ cognitive-personas/
 
 ---
 
-## 5. Quickstart & Installation
+## 5. Prerequisites & Dependency Model
+
+| Requirement | Type | Purpose | Behavior if Missing |
+| :--- | :--- | :--- | :--- |
+| **Node.js v22+** | Runtime | Native `node:sqlite`, `node:test`, `node:fs` | Required for lifecycle hook scripts. |
+| **npm Packages** | Package Dependencies | **0 dependencies** (no `node_modules` required) | Standard library only; zero package bloat. |
+| **agent-memory-mcp** | Companion MCP Server | Cross-session mastery (`global.db`) & ADR persistence | **Optional (Fails Open)**: If absent or uninstalled, all hooks and personas continue operating seamlessly in stateless in-session mode without errors. |
+
+---
+
+## 6. Quickstart & Installation
 
 ### Google Antigravity
 To install the reference plugin into your local Antigravity environment:

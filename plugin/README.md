@@ -1,7 +1,8 @@
 # Cognitive Personas Plugin for Google Antigravity
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)]()
+[![Zero npm Dependencies](https://img.shields.io/badge/npm%20dependencies-0-brightgreen.svg)]()
+[![Companion: agent--memory--mcp](https://img.shields.io/badge/companion-agent--memory--mcp-purple.svg)]()
 
 The `cognitive-personas` plugin brings human-in-the-loop cognitive personas to Google Antigravity to counter "vibe coding" comprehension debt and RLHF sycophancy without ceremony fatigue.
 
@@ -22,6 +23,17 @@ The `cognitive-personas` plugin brings human-in-the-loop cognitive personas to G
 3. **Sparring Teammate (`sparring-teammate`)**
    - Dialectic design thought partner for evaluating 2–3 options (*Simple vs. Scalable vs. Unconventional*).
    - Delivers a decisive peer recommendation and logs Architecture Decision Records (ADRs) to project memory.
+
+---
+
+## Dependency Model & Graceful Degradation
+
+- **Zero npm Dependencies:** Requires no `npm install` or third-party packages; runs entirely on built-in Node.js v22+ native modules (`node:sqlite`, `node:fs`, `node:os`).
+- **Companion MCP Server (`agent-memory-mcp`):** Recommended for cross-session mastery memory (`global.db`) and project ADR persistence.
+- **Fail-Open Graceful Degradation:** If `agent-memory-mcp` is not installed or enabled, hooks and skills fail open immediately:
+  - `hydrate-pedagogy.js` returns `{}` in <1ms without errors if `global.db` is absent.
+  - `friction-guard.js` runs 100% locally with zero external dependencies.
+  - All personas operate cleanly in stateless in-session mode.
 
 ---
 
