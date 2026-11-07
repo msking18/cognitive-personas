@@ -1,4 +1,15 @@
 #!/usr/bin/env node
+/**
+ * @fileoverview Plugin Synchronization Script
+ * @description
+ * Copies the `plugin/` directory to the user's Antigravity config plugins directory
+ * (`~/.gemini/config/plugins/cognitive-personas`) for local installation and testing.
+ *
+ * Usage:
+ *   npm run sync-plugin
+ *   node scripts/sync-plugin.js
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -15,14 +26,15 @@ console.log(`Source: ${pluginSource}`);
 console.log(`Target: ${targetPluginDir}`);
 
 try {
+  // Verify plugin source directory exists
   if (!fs.existsSync(pluginSource)) {
     throw new Error(`Plugin source directory not found: ${pluginSource}`);
   }
 
-  // Ensure target parent directory exists
+  // Ensure target parent plugins directory exists
   fs.mkdirSync(path.dirname(targetPluginDir), { recursive: true });
 
-  // Copy recursive (Node 16.7+)
+  // Perform recursive copy (replacing existing files)
   fs.cpSync(pluginSource, targetPluginDir, { recursive: true, force: true });
 
   console.log('✅ Successfully synced cognitive-personas plugin to Antigravity config directory!');

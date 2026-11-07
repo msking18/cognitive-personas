@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Test Suite: PreToolUse Friction Guard Hook
+ * @description
+ * Tests friction-guard.js across benign operations, high-blast-radius file edits,
+ * Windows backslash normalization, destructive commands, session deduplication,
+ * cross-conversation isolation, stale marker cleanup, and malformed stdin fail-open.
+ */
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';

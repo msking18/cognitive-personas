@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Unit Tests: Test Harness Utilities
+ * @description
+ * Verifies that SQLite temporary database lifecycle helpers create and clean up
+ * temporary database files as expected.
+ */
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

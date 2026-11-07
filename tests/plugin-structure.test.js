@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Test Suite: Plugin Structural Integrity & Manifest Validation
+ * @description
+ * Verifies plugin.json schema, hooks.json configuration, YAML frontmatter on all
+ * SKILL.md progressive skills, and strictly verifies the 400-token ceiling on AGENTS.md.
+ */
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
