@@ -1,0 +1,15 @@
+{
+  "SessionStart": {
+    "command": "node --no-warnings scripts/hydrate-pedagogy.js",
+    "timeout": 5000
+  },
+  "PreToolUse": {
+    "command": "node --no-warnings scripts/friction-guard.js",
+    "tools": [
+      "write_file",
+      "edit_file",
+      "run_command"
+    ],
+    "timeout": 5000
+  }
+}

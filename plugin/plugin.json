@@ -1,0 +1,13 @@
+{
+  "id": "cognitive-personas",
+  "name": "Cognitive Personas",
+  "version": "0.1.0",
+  "description": "Cross-harness cognitive persona framework: Adaptive Teacher, Blast-Radius Critic, and Sparring Teammate.",
+  "author": "Cognitive Personas Contributors",
+  "hooks": "hooks.json",
+  "skills": [
+    "skills/adaptive-teacher",
+    "skills/blast-radius-critic",
+    "skills/sparring-teammate"
+  ]
+}
