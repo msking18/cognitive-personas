@@ -1,0 +1,6 @@
+node_modules/
+*.tmp
+tests/fixtures/*.db
+.superpowers/
+.ag-memory/
+.gemini/

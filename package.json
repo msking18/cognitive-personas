@@ -1,0 +1,20 @@
+{
+  "name": "cognitive-personas",
+  "version": "0.1.0",
+  "description": "Cross-harness cognitive persona framework and reference Antigravity plugin",
+  "type": "module",
+  "scripts": {
+    "test": "node --no-warnings --test tests/**/*.test.js",
+    "lint-structure": "node --no-warnings tests/plugin-structure.test.js",
+    "sync-plugin": "node scripts/sync-plugin.js"
+  },
+  "keywords": [
+    "antigravity",
+    "personas",
+    "pedagogy",
+    "agentic-ai",
+    "sycophancy-prevention"
+  ],
+  "author": "Cognitive Personas Contributors",
+  "license": "MIT"
+}
