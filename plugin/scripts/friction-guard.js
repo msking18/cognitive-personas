@@ -45,31 +45,31 @@ const RISK_RULES = [
     category: 'DATABASE_SCHEMA',
     tools: ['write_file', 'edit_file'],
     pattern: /(migrations\/|schema\.prisma|schema\.sql|\.sql$|alembic\/)/i,
-    extractTarget: (args) => (args?.Path || '').replace(/\\/g, '/'),
+    extractTarget: (args) => (args?.Path || args?.path || args?.filePath || '').replace(/\\/g, '/'),
   },
   {
     category: 'SECURITY_AUTH',
     tools: ['write_file', 'edit_file'],
-    pattern: /(\/auth\/|\/crypto\/|\/permissions\/|\/jwt\/|jwt-signer|session-mgr)/i,
-    extractTarget: (args) => (args?.Path || '').replace(/\\/g, '/'),
+    pattern: /(^|\/)(auth|crypto|permissions|jwt)\/|jwt-signer|session-mgr/i,
+    extractTarget: (args) => (args?.Path || args?.path || args?.filePath || '').replace(/\\/g, '/'),
   },
   {
     category: 'ROOT_DEPENDENCIES',
     tools: ['write_file', 'edit_file'],
-    pattern: /(^|\/)(package\.json|Cargo\.toml|go\.mod|requirements\.txt|pom\.xml)$/i,
-    extractTarget: (args) => (args?.Path || '').replace(/\\/g, '/'),
+    pattern: /(^|\/)(package\.json|package-lock\.json|Cargo\.toml|Cargo\.lock|go\.mod|go\.sum|requirements\.txt|pom\.xml)$/i,
+    extractTarget: (args) => (args?.Path || args?.path || args?.filePath || '').replace(/\\/g, '/'),
   },
   {
     category: 'CONTRACT_SURFACE',
     tools: ['write_file', 'edit_file'],
-    pattern: /(^|\/)(openapi\.(json|yaml|yml)|.*\.proto)$/i,
-    extractTarget: (args) => (args?.Path || '').replace(/\\/g, '/'),
+    pattern: /(^|\/)(openapi\.(json|yaml|yml)|.*\.proto|graphql\.schema|schema\.graphql|.*\.gql|.*\.graphql)$/i,
+    extractTarget: (args) => (args?.Path || args?.path || args?.filePath || '').replace(/\\/g, '/'),
   },
   {
     category: 'DESTRUCTIVE_COMMANDS',
     tools: ['run_command'],
-    pattern: /\b(rm\s+-rf|git\s+reset\s+--hard|drop\s+table|delete\s+from|mkfs|dd\s+if=)\b/i,
-    extractTarget: (args) => args?.CommandLine || '',
+    pattern: /\b(rm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r|-r\s+-f|-f\s+-r)|git\s+reset\s+--hard|drop\s+table|delete\s+from|mkfs|dd\s+if=|remove-item\s+.*(-recurse.*-force|-force.*-recurse)|rmdir\s+\/s\s+\/q|rd\s+\/s\s+\/q)\b/i,
+    extractTarget: (args) => args?.CommandLine || args?.command || args?.commandLine || '',
   },
 ];
 
@@ -111,6 +111,12 @@ function pruneStaleMarkers(tempDir) {
  */
 function run() {
   try {
+    // If run directly in an interactive terminal, exit immediately to prevent hang
+    if (process.stdin.isTTY) {
+      process.stdout.write(JSON.stringify({ decision: 'allow' }));
+      return;
+    }
+
     // Read stdin synchronously from file descriptor 0
     let rawInput = '';
     try {
@@ -135,8 +141,12 @@ function run() {
       return;
     }
 
-    const { toolName, arguments: args, context } = payload || {};
-    const conversationId = context?.conversationId || 'default-session';
+    // Dual-compatibility: supports Antigravity native { toolCall: { name, args } }
+    // as well as generic/test harness { toolName, arguments }
+    const toolName = payload?.toolCall?.name || payload?.toolName || '';
+    const args = payload?.toolCall?.args || payload?.arguments || {};
+    const conversationId =
+      payload?.conversationId || payload?.context?.conversationId || 'default-session';
     const tempDir = os.tmpdir();
 
     // Background housekeeping for markers older than 24h
@@ -200,9 +210,12 @@ function run() {
 
     // Emit prompt decision requiring explicit human confirmation
     const promptMessage = `CRITICAL RISK: Modifying high-blast-radius surface [${matchedCategory}]. Before proceeding, have you engaged the Blast-Radius Critic or Sparring Teammate?`;
+    const isNativeAntigravity = Boolean(payload?.toolCall);
     process.stdout.write(
       JSON.stringify({
-        decision: 'prompt',
+        decision: isNativeAntigravity ? 'ask' : 'prompt',
+        prompt: true,
+        reason: promptMessage,
         message: promptMessage,
       })
     );

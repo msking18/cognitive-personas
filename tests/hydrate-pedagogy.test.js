@@ -45,10 +45,22 @@ test('hydrate-pedagogy: populated global.db emits formatted [PEDAGOGY-HYDRATED] 
 
     const output = JSON.parse(stdout);
     assert.ok(output.systemMessage, 'Output should have systemMessage property');
+    assert.ok(Array.isArray(output.injectSteps), 'Output should have injectSteps array for Antigravity host');
+    assert.equal(output.injectSteps.length, 1, 'injectSteps should contain 1 step');
+    assert.ok(output.injectSteps[0].systemMessage.systemMessage, 'injectSteps must contain systemMessage');
+
     assert.ok(output.systemMessage.includes('[PEDAGOGY-HYDRATED]'), 'Message should start with [PEDAGOGY-HYDRATED]');
     assert.ok(output.systemMessage.includes('typescript'), 'Message should include typescript profile');
     assert.ok(output.systemMessage.includes('rust'), 'Message should include rust profile');
     assert.ok(output.systemMessage.includes('docker'), 'Message should include docker profile');
+
+    // Strict token budget assertion: output must be < 150 tokens (~600 chars)
+    const estimatedTokens = Math.ceil(output.systemMessage.length / 4);
+    assert.ok(
+      estimatedTokens < 150,
+      `Hydration output must be strictly < 150 tokens. Was ${estimatedTokens} (~${output.systemMessage.length} chars)`
+    );
+
     // Allow for Windows child process spawn overhead under parallel test suite
     assert.ok(durationMs < 350, `Execution duration including process spawn should be < 350ms, was ${durationMs}ms`);
   } finally {
@@ -115,5 +127,34 @@ test('hydrate-pedagogy: corrupt database file fails open to empty object {} with
     assert.deepEqual(output, {});
   } finally {
     cleanupTempDb(corruptDbPath);
+  }
+});
+
+test('hydrate-pedagogy: falls back to .agents/pedagogy-profile.md when SQLite DB is absent', () => {
+  const fakeDbPath = path.join(path.dirname(scriptPath), 'non-existent-db.db');
+  const tempProfilePath = path.join(path.dirname(scriptPath), 'temp-test-profile.md');
+  fs.writeFileSync(
+    tempProfilePath,
+    '- rust: tier: Novice | posture: scaffolded\n- typescript: tier: Proficient'
+  );
+
+  try {
+    const { stdout, stderr, exitCode } = runHookProcess(scriptPath, '', {
+      AG_GLOBAL_DB_PATH: fakeDbPath,
+      AG_PEDAGOGY_PROFILE_PATH: tempProfilePath,
+    });
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, '');
+    const output = JSON.parse(stdout);
+    assert.ok(output.systemMessage);
+    assert.ok(output.systemMessage.includes('[PEDAGOGY-HYDRATED]'));
+    assert.ok(output.systemMessage.includes('rust'));
+    assert.ok(output.systemMessage.includes('typescript'));
+    assert.ok(Array.isArray(output.injectSteps));
+  } finally {
+    if (fs.existsSync(tempProfilePath)) {
+      fs.unlinkSync(tempProfilePath);
+    }
   }
 });

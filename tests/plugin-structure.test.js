@@ -41,8 +41,9 @@ test('hooks configuration (hooks.json) has valid SessionStart and PreToolUse hoo
   const content = fs.readFileSync(hooksPath, 'utf8');
   const hooksConfig = JSON.parse(content);
 
-  assert.ok(hooksConfig.SessionStart, 'SessionStart hook must be defined');
-  assert.ok(hooksConfig.PreToolUse, 'PreToolUse hook must be defined');
+  const config = hooksConfig['cognitive-personas'] || hooksConfig;
+  assert.ok(config.SessionStart, 'SessionStart hook must be defined');
+  assert.ok(config.PreToolUse, 'PreToolUse hook must be defined');
 
   // Verify scripts exist on disk
   const sessionScript = path.join(pluginRoot, 'scripts/hydrate-pedagogy.js');

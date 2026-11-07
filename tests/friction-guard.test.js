@@ -76,6 +76,20 @@ test('friction-guard: high-blast-radius file (auth) triggers prompt decision', (
   assert.ok(res.message.includes('SECURITY_AUTH'));
 });
 
+test('friction-guard: root relative path without leading slash (auth/login.ts) triggers prompt', () => {
+  const payload = {
+    toolName: 'write_file',
+    arguments: { Path: 'auth/login.ts' },
+    context: { conversationId: `conv-root-auth-${Date.now()}` },
+  };
+
+  const { stdout, stderr, exitCode } = runHookProcess(scriptPath, payload);
+  assert.equal(exitCode, 0);
+  const res = JSON.parse(stdout);
+  assert.equal(res.decision, 'prompt');
+  assert.ok(res.message.includes('SECURITY_AUTH'));
+});
+
 test('friction-guard: Windows path backslashes normalized and detected', () => {
   const payload = {
     toolName: 'write_file',
@@ -102,6 +116,36 @@ test('friction-guard: destructive commands trigger prompt decision', () => {
   const res = JSON.parse(stdout);
   assert.equal(res.decision, 'prompt');
   assert.ok(res.message.includes('DESTRUCTIVE_COMMANDS'));
+});
+
+test('friction-guard: Windows PowerShell destructive command (Remove-Item) triggers prompt', () => {
+  const payload = {
+    toolName: 'run_command',
+    arguments: { CommandLine: 'Remove-Item -Path C:\\data -Recurse -Force' },
+    context: { conversationId: `conv-ps-${Date.now()}` },
+  };
+
+  const { stdout, stderr, exitCode } = runHookProcess(scriptPath, payload);
+  assert.equal(exitCode, 0);
+  const res = JSON.parse(stdout);
+  assert.equal(res.decision, 'prompt');
+  assert.ok(res.message.includes('DESTRUCTIVE_COMMANDS'));
+});
+
+test('friction-guard: Antigravity native payload structure emits ask decision', () => {
+  const payload = {
+    toolCall: {
+      name: 'write_file',
+      args: { Path: 'prisma/schema.prisma' },
+    },
+    conversationId: `conv-native-${Date.now()}`,
+  };
+
+  const { stdout, stderr, exitCode } = runHookProcess(scriptPath, payload);
+  assert.equal(exitCode, 0);
+  const res = JSON.parse(stdout);
+  assert.equal(res.decision, 'ask');
+  assert.ok(res.reason.includes('DATABASE_SCHEMA'));
 });
 
 test('friction-guard: session deduplication allows second occurrence in same conversation', () => {
@@ -158,6 +202,8 @@ test('friction-guard: stale markers older than 24 hours are pruned', () => {
   const oldMarker = path.join(tempDir, `ag-friction-stale-test-${Date.now()}.json`);
   const twoDaysAgo = Date.now() - 48 * 3600 * 1000;
   fs.writeFileSync(oldMarker, JSON.stringify({ timestamp: twoDaysAgo }));
+  // Explicitly update file filesystem mtime to 48 hours ago
+  fs.utimesSync(oldMarker, twoDaysAgo / 1000, twoDaysAgo / 1000);
 
   // Invoke hook to trigger cleanup routine
   const payload = {
@@ -167,9 +213,6 @@ test('friction-guard: stale markers older than 24 hours are pruned', () => {
   };
   runHookProcess(scriptPath, payload);
 
-  // Check if stale test marker was pruned (if prefixed with ag-friction-)
-  assert.ok(fs.existsSync(tempDir));
-  if (fs.existsSync(oldMarker)) {
-    fs.unlinkSync(oldMarker);
-  }
+  // Verify that the stale marker was actually pruned from disk
+  assert.equal(fs.existsSync(oldMarker), false, 'Stale marker older than 24h must be deleted');
 });

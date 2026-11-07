@@ -36,55 +36,110 @@ function run() {
     const defaultDbPath = path.join(os.homedir(), '.ag-memory-mcp', 'global.db');
     const dbPath = process.env.AG_GLOBAL_DB_PATH || defaultDbPath;
 
-    // Fast existence check before attempting to open the SQLite file
-    if (!fs.existsSync(dbPath)) {
-      process.stdout.write(JSON.stringify({}));
-      return;
-    }
+    let lines = [];
 
-    let db;
-    let rows = [];
-    try {
-      // Open SQLite in read-only mode with a strict 50ms lock contention timeout
-      db = new DatabaseSync(dbPath, { readOnly: true, timeout: 50 });
-      const stmt = db.prepare(`
-        SELECT tech_stack, title, summary
-        FROM global_knowledge
-        WHERE category = 'pedagogy'
-        ORDER BY updated_at DESC
-        LIMIT 10;
-      `);
-      rows = stmt.all();
-    } catch {
-      // Fail open on table missing, lock contention (SQLITE_BUSY), or corruption
-      rows = [];
-    } finally {
-      // Ensure database file handle is cleanly closed
-      if (db) {
+    // Fast existence check before attempting to open the SQLite file
+    const isExplicitDb = Boolean(process.env.AG_GLOBAL_DB_PATH);
+    const fallbackPath =
+      process.env.AG_PEDAGOGY_PROFILE_PATH ||
+      (!isExplicitDb ? path.join(process.cwd(), '.agents', 'pedagogy-profile.md') : null);
+
+    if (!fs.existsSync(dbPath)) {
+      // Fallback: check workspace-local .agents/pedagogy-profile.md if SQLite is absent
+      if (fallbackPath && fs.existsSync(fallbackPath)) {
         try {
-          db.close();
+          const content = fs.readFileSync(fallbackPath, 'utf8').trim();
+          if (content) {
+            lines = [
+              '[PEDAGOGY-HYDRATED] Developer Domain Mastery Profiles (.agents/pedagogy-profile.md):',
+              content.slice(0, 450),
+              'Calibrate explanations and scaffolding to these recorded mastery profiles.',
+            ];
+          }
         } catch {
-          // Ignore close error on exit
+          // Ignore read error on fallback
         }
+      }
+
+      if (lines.length === 0) {
+        process.stdout.write(JSON.stringify({}));
+        return;
+      }
+    } else {
+      let db;
+      let rows = [];
+      try {
+        // Open SQLite in read-only mode with a strict 50ms lock contention timeout
+        db = new DatabaseSync(dbPath, { readOnly: true, timeout: 50 });
+        // Enforce strict token budget: limit to top 5 profiles (< 150 tokens target)
+        const stmt = db.prepare(`
+          SELECT tech_stack, title, summary
+          FROM global_knowledge
+          WHERE category = 'pedagogy'
+          ORDER BY updated_at DESC
+          LIMIT 5;
+        `);
+        rows = stmt.all();
+      } catch {
+        // Fail open on table missing, lock contention (SQLITE_BUSY), or corruption
+        rows = [];
+      } finally {
+        // Ensure database file handle is cleanly closed
+        if (db) {
+          try {
+            db.close();
+          } catch {
+            // Ignore close error on exit
+          }
+        }
+      }
+
+      // If no pedagogy records exist, check for workspace-local profile fallback
+      if (!rows || rows.length === 0) {
+        if (fallbackPath && fs.existsSync(fallbackPath)) {
+          try {
+            const content = fs.readFileSync(fallbackPath, 'utf8').trim();
+            if (content) {
+              lines = [
+                '[PEDAGOGY-HYDRATED] Developer Domain Mastery Profiles (.agents/pedagogy-profile.md):',
+                content.slice(0, 450),
+                'Calibrate explanations and scaffolding to these recorded mastery profiles.',
+              ];
+            }
+          } catch {
+            // Ignore fallback read error
+          }
+        }
+
+        if (lines.length === 0) {
+          process.stdout.write(JSON.stringify({}));
+          return;
+        }
+      } else {
+        // Format human-readable hydration block enforcing < 150 token budget
+        lines = ['[PEDAGOGY-HYDRATED] Developer Domain Mastery Profiles:'];
+        for (const row of rows) {
+          const domain = row.tech_stack || row.title.replace(/^Mastery:\s*/i, '');
+          // Compress multi-line summary if necessary
+          const cleanSummary = (row.summary || '').replace(/\s+/g, ' ').slice(0, 90);
+          lines.push(`- ${domain}: ${cleanSummary}`);
+        }
+        lines.push('Calibrate explanations and scaffolding to these recorded mastery profiles.');
       }
     }
 
-    // If no pedagogy records exist, return empty object to bypass context injection
-    if (!rows || rows.length === 0) {
-      process.stdout.write(JSON.stringify({}));
-      return;
-    }
+    const formattedMessage = lines.join('\n') + '\n';
 
-    // Format human-readable hydration block for the agent's context window
-    const lines = ['[PEDAGOGY-HYDRATED] Developer Domain Mastery Profiles:'];
-    for (const row of rows) {
-      const domain = row.tech_stack || row.title.replace(/^Mastery:\s*/i, '');
-      lines.push(`- ${domain}: ${row.summary}`);
-    }
-    lines.push('Calibrate explanations and scaffolding to these recorded mastery profiles.');
-
+    // Dual-wire protocol: Antigravity native injectSteps + legacy systemMessage
     const result = {
-      systemMessage: lines.join('\n') + '\n',
+      systemMessage: formattedMessage,
+      injectSteps: [
+        {
+          systemMessage: {
+            systemMessage: formattedMessage,
+          },
+        },
+      ],
     };
 
     process.stdout.write(JSON.stringify(result));

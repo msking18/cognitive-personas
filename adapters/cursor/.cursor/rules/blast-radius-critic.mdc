@@ -1,6 +1,6 @@
 ---
 description: Adversarial falsification reviewer for high-blast-radius and irreversible code paths.
-globs: ["**/migrations/**", "**/auth/**", "**/crypto/**", "schema.prisma", "schema.sql", "package.json", "Cargo.toml"]
+globs: ["**/migrations/**", "**/auth/**", "**/crypto/**", "**/permissions/**", "**/jwt/**", "schema.prisma", "schema.sql", "*.sql", "alembic/**", "package.json", "package-lock.json", "Cargo.toml", "Cargo.lock", "go.mod", "requirements.txt", "pom.xml", "openapi.*", "**/proto/**", "graphql.schema", "schema.graphql"]
 alwaysApply: true
 ---
 

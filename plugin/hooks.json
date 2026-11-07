@@ -1,15 +1,24 @@
 {
-  "SessionStart": {
-    "command": "node --no-warnings scripts/hydrate-pedagogy.js",
-    "timeout": 5000
-  },
-  "PreToolUse": {
-    "command": "node --no-warnings scripts/friction-guard.js",
-    "tools": [
-      "write_file",
-      "edit_file",
-      "run_command"
+  "cognitive-personas": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node --no-warnings scripts/hydrate-pedagogy.js",
+        "timeout": 5
+      }
     ],
-    "timeout": 5000
+    "PreToolUse": [
+      {
+        "matcher": "write_file|edit_file|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --no-warnings scripts/friction-guard.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }
