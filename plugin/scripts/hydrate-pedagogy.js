@@ -32,6 +32,24 @@ import { DatabaseSync } from 'node:sqlite';
  */
 function run() {
   try {
+    // Safely inspect stdin for workspacePaths if invoked by Antigravity SessionStart hook
+    let workspaceRoot = process.cwd();
+    let hasExplicitWorkspace = false;
+    if (!process.stdin.isTTY) {
+      try {
+        const rawInput = fs.readFileSync(0, 'utf8');
+        if (rawInput && rawInput.trim()) {
+          const payload = JSON.parse(rawInput);
+          if (Array.isArray(payload.workspacePaths) && payload.workspacePaths.length > 0 && payload.workspacePaths[0]) {
+            workspaceRoot = payload.workspacePaths[0];
+            hasExplicitWorkspace = true;
+          }
+        }
+      } catch {
+        // Fail-open on empty or malformed stdin
+      }
+    }
+
     // Determine path to global SQLite database (allows env override for test suites)
     const defaultDbPath = path.join(os.homedir(), '.ag-memory-mcp', 'global.db');
     const dbPath = process.env.AG_GLOBAL_DB_PATH || defaultDbPath;
@@ -42,7 +60,7 @@ function run() {
     const isExplicitDb = Boolean(process.env.AG_GLOBAL_DB_PATH);
     const fallbackPath =
       process.env.AG_PEDAGOGY_PROFILE_PATH ||
-      (!isExplicitDb ? path.join(process.cwd(), '.agents', 'pedagogy-profile.md') : null);
+      (!isExplicitDb || hasExplicitWorkspace ? path.join(workspaceRoot, '.agents', 'pedagogy-profile.md') : null);
 
     if (!fs.existsSync(dbPath)) {
       // Fallback: check workspace-local .agents/pedagogy-profile.md if SQLite is absent
@@ -71,10 +89,20 @@ function run() {
       try {
         // Open SQLite in read-only mode with a strict 50ms lock contention timeout
         db = new DatabaseSync(dbPath, { readOnly: true, timeout: 50 });
+
+        // Check whether global_memories (agent-memory v3.1) or global_knowledge (RFC v3.2) exists
+        let tableName = 'global_knowledge';
+        try {
+          const hasMemories = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='global_memories'").get();
+          if (hasMemories) {
+            tableName = 'global_memories';
+          }
+        } catch {}
+
         // Enforce strict token budget: limit to top 5 profiles (< 150 tokens target)
         const stmt = db.prepare(`
           SELECT tech_stack, title, summary
-          FROM global_knowledge
+          FROM ${tableName}
           WHERE category = 'pedagogy'
           ORDER BY updated_at DESC
           LIMIT 5;
