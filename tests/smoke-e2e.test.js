@@ -144,7 +144,8 @@ test('E2E Smoke: PreToolUse friction gating across all 5 risk categories and ded
   });
   const migResult = JSON.parse(migrationEdit.stdout);
   assert.equal(migResult.decision, 'ask', 'Native Antigravity payload must emit ask');
-  assert.equal(migResult.prompt, true);
+  assert.equal(migResult.prompt, undefined, 'Native Antigravity payload must not emit unknown prompt field');
+  assert.equal(migResult.message, undefined, 'Native Antigravity payload must not emit unknown message field');
   assert.ok(migResult.reason.includes('DATABASE_SCHEMA'));
 
   // Deduplication check: Second call in same conversation is allowed without prompt fatigue

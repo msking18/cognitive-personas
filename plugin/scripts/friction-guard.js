@@ -211,14 +211,18 @@ function run() {
     // Emit prompt decision requiring explicit human confirmation
     const promptMessage = `CRITICAL RISK: Modifying high-blast-radius surface [${matchedCategory}]. Before proceeding, have you engaged the Blast-Radius Critic or Sparring Teammate?`;
     const isNativeAntigravity = Boolean(payload?.toolCall);
-    process.stdout.write(
-      JSON.stringify({
-        decision: isNativeAntigravity ? 'ask' : 'prompt',
-        prompt: true,
-        reason: promptMessage,
-        message: promptMessage,
-      })
-    );
+    const response = isNativeAntigravity
+      ? {
+          decision: 'ask',
+          reason: promptMessage,
+        }
+      : {
+          decision: 'prompt',
+          prompt: true,
+          reason: promptMessage,
+          message: promptMessage,
+        };
+    process.stdout.write(JSON.stringify(response));
   } catch {
     // Fail-open guarantee: never block tool execution on script defect
     process.stdout.write(JSON.stringify({ decision: 'allow' }));
